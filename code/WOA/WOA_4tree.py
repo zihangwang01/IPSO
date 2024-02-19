@@ -1,0 +1,325 @@
+import numpy as np
+import matplotlib.pyplot as plt
+import matplotlib as mpl
+import  catboost as cb
+import warnings
+warnings.filterwarnings("ignore")
+from xgboost import XGBClassifier
+import copy
+from sklearn.metrics import confusion_matrix
+from sklearn.model_selection import train_test_split
+from lightgbm.sklearn import LGBMClassifier
+import math
+from sklearn import tree
+import pandas as pd
+from sklearn.ensemble import GradientBoostingClassifier
+from sklearn.metrics import  accuracy_score
+plt.rcParams["font.sans-serif"]='SimHei'
+mpl.rcParams['axes.unicode_minus']=False
+import pdb
+import pdb
+
+import numpy as np
+import matplotlib.pyplot as plt
+import matplotlib as mpl
+import  catboost as cb
+import warnings
+import heapq
+from tqdm import tqdm
+warnings.filterwarnings("ignore")
+from xgboost import XGBClassifier
+import copy
+from sklearn.metrics import confusion_matrix, precision_score, recall_score, f1_score
+from sklearn.model_selection import train_test_split
+from lightgbm.sklearn import LGBMClassifier
+import math
+from sklearn import tree
+import pandas as pd
+from sklearn.ensemble import GradientBoostingClassifier
+from sklearn.metrics import  accuracy_score
+plt.rcParams["font.sans-serif"]='SimHei'
+mpl.rcParams['axes.unicode_minus']=False
+import random
+def PSfit_func(x_train, x_test, y_train, y_test,goal):#调用sklearn中分类器，并计算准确率
+    l = pd.DataFrame(columns=('1', '2', '3', '4', '5'))
+    if x_train.shape[0] != 0:  # 防止没有特征被选择
+        for i in range(0, 4):
+            if i == 0:  # 调用GDBT
+                gbm3 = GradientBoostingClassifier(learning_rate=0.053, n_estimators=63,
+                                                  random_state=1)
+                gbm3.fit(x_train, y_train)
+                y_pred = gbm3.predict(x_test)
+                l['1'] = y_pred
+                a1 = accuracy_score(y_test, y_pred)
+                # print(a1)
+            elif i == 1:  # 调用catboost
+                model1 = cb.CatBoostClassifier(iterations=103, verbose=False, max_depth=7,
+                                               learning_rate=0.033, random_state=1)
+                model1.fit(x_train, y_train)
+                y_pred1 = model1.predict(x_test)
+                l['2'] = y_pred1
+                a2 = accuracy_score(y_pred1, y_test)
+                # print(a2)
+
+            elif i == 2:  # 调用XGBclassifier
+                model2 = XGBClassifier(n_estimators=63, learning_rate=0.053,
+                                       random_state=1, eval_metric='error')
+                model2.fit(x_train, y_train)
+                y_pred2 = model2.predict(x_test)
+                l['3'] = y_pred2
+                a3 = accuracy_score(y_pred2, y_test)
+                # print(a3)
+            elif i == 3:
+                model3 = LGBMClassifier(n_estimators=63, learning_rate=0.053,
+                                        random_state=1)
+                model3.fit(x_train, y_train)
+                y_pred3 = model3.predict(x_test)
+                l['4'] = y_pred3
+                a4 = accuracy_score(y_pred3, y_test)
+                # print(a4)
+        l = l.replace(0, -1)  # 将l中的0全换成-1
+        list1 = []
+        m = [a1, a2, a3, a4]
+        m = sorted(m)  # 按大小进行排序
+        dis = m[3] - m[0]
+        for i in range(0, l.shape[0]):
+            if 0.015 > dis > 0.005:
+                if l.loc[i, '1'] * l.loc[i, '2'] * l.loc[i, '3'] * l.loc[i, '4'] >= 0:
+                    if a1 * l.loc[i, '1'] + a2 * l.loc[i, '2'] + a3 * l.loc[i, '3'] + a4 * l.loc[i, '4'] >= 0:
+                        list1.append(1)
+                    else:
+                        list1.append(0)
+                else:
+                    if l.loc[i, '1'] < 0 and l.loc[i, '2'] == l.loc[i, '3'] == l.loc[
+                        i, '4'] == 1 and a1 > a2 and a1 > a3 and a1 > a4:
+                        list1.append(0)
+                    elif l.loc[i, '1'] > 0 and l.loc[i, '2'] == l.loc[i, '3'] == l.loc[
+                        i, '4'] == -1 and a1 > a2 and a1 > a3 and a1 > a4:
+                        list1.append(1)
+                    elif l.loc[i, '2'] < 0 and l.loc[i, '1'] == l.loc[i, '3'] == l.loc[
+                        i, '4'] == 1 and a2 > a1 and a2 > a3 and a2 > a4:
+                        list1.append(0)
+                    elif l.loc[i, '2'] > 0 and l.loc[i, '1'] == l.loc[i, '3'] == l.loc[
+                        i, '4'] == -1 and a2 > a1 and a2 > a3 and a2 > a4:
+                        list1.append(1)
+                    elif l.loc[i, '3'] == -1 and l.loc[i, '1'] == l.loc[i, '2'] == l.loc[
+                        i, '4'] == 1 and a3 > a1 and a3 > a2 and a3 > a4:
+                        list1.append(0)
+                    elif l.loc[i, '3'] > 0 and l.loc[i, '1'] == l.loc[i, '2'] == l.loc[
+                        i, '4'] == -1 and a3 > a1 and a3 > a2 and a3 > a4:
+                        list1.append(1)
+                    elif l.loc[i, '4'] == -1 and l.loc[i, '1'] == l.loc[i, '2'] == l.loc[
+                        i, '3'] == 1 and a4 > a1 and a4 > a2 and a4 > a3:
+                        list1.append(0)
+                    elif l.loc[i, '4'] > 0 and l.loc[i, '1'] == l.loc[i, '2'] == l.loc[
+                        i, '3'] == -1 and a4 > a1 and a4 > a2 and a4 > a3:
+                        list1.append(1)
+                    else:
+                        if a1 * l.loc[i, '1'] + a2 * l.loc[i, '2'] + a3 * l.loc[i, '3'] + a4 * l.loc[i, '4'] >= 0:
+                            list1.append(1)
+                        else:
+                            list1.append(0)
+            elif dis > 0.015:
+                if a1 > a2 and a1 > a3 and a1 > a4:
+                    A1 = 1.5 * a1
+                    A2 = a2
+                    A3 = a3
+                    A4 = a4
+                elif a2 > a1 and a2 > a3 and a2 > a4:
+                    A2 = 1.5 * a2
+                    A1 = a1
+                    A3 = a3
+                    A4 = a4
+                elif a3 > a2 and a3 > a1 and a3 > a4:
+                    A3 = 1.5 * a3
+                    A2 = a2
+                    A1 = a1
+                    A4 = a4
+                elif a4 > a2 and a4 > a3 and a4 > a1:
+                    A4 = 1.5 * a4
+                    A2 = a2
+                    A3 = a3
+                    A1 = a1
+                else:
+                    A1 = a1
+                    A2 = a2
+                    A3 = a3
+                    A4 = a4
+                if l.loc[i, '1'] * l.loc[i, '2'] * l.loc[i, '3'] * l.loc[i, '4'] >= 0:
+                    if A1 * l.loc[i, '1'] + A2 * l.loc[i, '2'] + A3 * l.loc[i, '3'] + A4 * l.loc[i, '4'] >= 0:
+                        list1.append(1)
+                    else:
+                        list1.append(0)
+                else:
+                    if l.loc[i, '1'] < 0 and l.loc[i, '2'] == l.loc[i, '3'] == l.loc[
+                        i, '4'] == 1 and a1 > a2 and a1 > a3 and a1 > a4:
+                        list1.append(0)
+                    elif l.loc[i, '1'] > 0 and l.loc[i, '2'] == l.loc[i, '3'] == l.loc[
+                        i, '4'] == -1 and a1 > a2 and a1 > a3 and a1 > a4:
+                        list1.append(1)
+                    elif l.loc[i, '2'] < 0 and l.loc[i, '1'] == l.loc[i, '3'] == l.loc[
+                        i, '4'] == 1 and a2 > a1 and a2 > a3 and a2 > a4:
+                        list1.append(0)
+                    elif l.loc[i, '2'] > 0 and l.loc[i, '1'] == l.loc[i, '3'] == l.loc[
+                        i, '4'] == -1 and a2 > a1 and a2 > a3 and a2 > a4:
+                        list1.append(1)
+                    elif l.loc[i, '3'] == -1 and l.loc[i, '1'] == l.loc[i, '2'] == l.loc[
+                        i, '4'] == 1 and a3 > a1 and a3 > a2 and a3 > a4:
+                        list1.append(0)
+                    elif l.loc[i, '3'] > 0 and l.loc[i, '1'] == l.loc[i, '2'] == l.loc[
+                        i, '4'] == -1 and a3 > a1 and a3 > a2 and a3 > a4:
+                        list1.append(1)
+                    elif l.loc[i, '4'] == -1 and l.loc[i, '1'] == l.loc[i, '2'] == l.loc[
+                        i, '3'] == 1 and a4 > a1 and a4 > a2 and a4 > a3:
+                        list1.append(0)
+                    elif l.loc[i, '4'] > 0 and l.loc[i, '1'] == l.loc[i, '2'] == l.loc[
+                        i, '3'] == -1 and a4 > a1 and a4 > a2 and a4 > a3:
+                        list1.append(1)
+                    else:
+                        if a1 * l.loc[i, '1'] + a2 * l.loc[i, '2'] + a3 * l.loc[i, '3'] + a4 * l.loc[i, '4'] >= 0:
+                            list1.append(1)
+                        else:
+                            list1.append(0)
+
+            else:
+                if a1 * l.loc[i, '1'] + a2 * l.loc[i, '2'] + a3 * l.loc[i, '3'] + a4 * l.loc[i, '4'] >= 0:
+                    list1.append(1)
+                else:
+                    list1.append(0)
+
+        accuracy = accuracy_score(list1, y_test)
+        FP = confusion_matrix(y_test, list1)[0][1] / (
+                confusion_matrix(y_test, list1)[0][0] + confusion_matrix(y_test, list1)[0][1] +
+                confusion_matrix(y_test, list1)[1][1] + confusion_matrix(y_test, list1)[1][0])
+        FN = confusion_matrix(y_test, list1)[1][0] / (
+                confusion_matrix(y_test, list1)[0][0] + confusion_matrix(y_test, list1)[0][1] +
+                confusion_matrix(y_test, list1)[1][1] + confusion_matrix(y_test, list1)[1][0])
+        pre = precision_score(list1, y_test)
+        rec = recall_score(list1, y_test)
+        f1 = f1_score(list1, y_test)
+        return accuracy, FP, FN, pre, rec, f1  # Accuracy : 0.984
+    else:
+        return 0, 0, 0, 0, 0, 0
+def PSfitness_func(X,wd,x_train, x_test, y_train, y_test,goal):  #sklearn拟合样本，并计算对应的准确率
+    """计算单个粒子的的适应度值，也就是目标函数值 """
+    # train_inf = np.isinf(X1)
+    # X1[train_inf] = 0
+    # n=X1.shape[0]
+    # name=X1.columns
+    # name=name[0:n:1]
+    # X=X.values
+    columns = x_train.columns.values.tolist()  # 获取列名
+    X_train = np.array(x_train)
+    X_test = np.array(x_test)
+    y_test = np.array(y_test)
+    y_train = np.array(y_train)  # 选取因变量
+
+    co = ()
+    for i in range(0, len(columns) - 1):
+        co += (columns[i],)  # 将列名放到元组中
+    x_train1 = pd.DataFrame(columns=co)  # 构建索引为columns的二维数组
+    x_test1 = pd.DataFrame(columns=co)
+    for i in range(0, wd):
+        if X[i] >= 0.5:
+            # pdb.set_trace()
+            x_train1[columns[i]] = copy.deepcopy(X_train[:, i])  # 若第i个特征值被选取，则增加该列
+    for i in range(0, wd):
+        if X[i] >= 0.5:
+            x_test1[columns[i]] = copy.deepcopy(X_test[:, i])  # 若第i个特征值被选取，则增加该列
+    m = 0  # 设置空的二维数组，用来存储调用的数据
+    x_train1 = x_train1.dropna(axis=1)  # 删去含空值的行
+    x_train1 = np.array(x_train1)
+    x_test1 = x_test1.dropna(axis=1)  # 删去含空值的行
+    x_test1 = np.array(x_test1)
+    geshu = x_train1.shape[1]  # 查看调用了多少个X
+    accuracy, FP, FN,pre,rec,f1 = PSfit_func(x_train1, x_test1, y_train, y_test,goal)
+    w = accuracy  # 以特征值越少越好和准确率越高越好作为选择原则
+    w1 = [ accuracy,pre,rec,f1, FP, FN]
+    # pdb.set_trace()
+    return w1
+def danwh(X,size,wd):
+    for i in range(size):
+        for j in range(wd):
+            if X[i][j]>0.5:
+                X[i][j]=1
+            else:
+                X[i][j]=0     #返回特征的选择情况
+    return X
+def juli(i,X,size,wd):
+    ju=[]
+    for k in range(size):
+        if k !=i:
+            su=0
+            for j in range(wd):
+                su+=abs(X[i][j]-X[k][j])
+            ju.append(su)   #把距离大小放入距离矩阵
+        else:
+            ju.append(1000000)
+    min1=min(ju)
+    return  X[ju.index(min1)]    #返回距离最近的鲸鱼位置
+
+
+def xupdate(X,size,wd,t,maxt,MAXX): #更新鲸鱼位置信息
+    A,C=shousuo(t,maxt)  #根据收缩包围机制生成A和C
+    if abs(A)>1:#则进行搜索猎物，根据最近的鲸鱼位置进行位置的更新
+        M=copy.deepcopy(danwh(X,size,wd))
+        for i in range(0,size):
+            L=copy.deepcopy(juli(i,M,size,wd))#计算到该鲸鱼的最近的鲸鱼位置
+            D=C*L-X[i]
+            X[i]=copy.deepcopy(L-A*D)
+
+    else :  #进行螺旋更新位置(根据最优位置
+        for i in range(0,size):
+            D=MAXX-X[i]  #计算位置差
+            l=random.random()  #生成随机数
+            X[i]=copy.deepcopy(D*np.exp(l)*np.cos(2*np.pi*l)+MAXX)
+
+    return X   #返回更新后的鲸鱼种群
+
+def pick(X,xtrain,xtest,ytrain,ytest,size,wd,goal):   #选出最优的鲸鱼位置
+    fitlist=[]
+    for i in range(0,size):
+        fit=PSfitness_func(X[i],wd,xtrain,xtest,ytrain,ytest,goal)  #计算每一个鲸鱼的适应值大小
+        fitlist.append(fit[1])
+    max1=max(fitlist)
+    index1=fitlist.index(max1)  #选出最优位置
+    return X[index1],PSfitness_func(X[index1],wd,xtrain,xtest,ytrain,ytest,goal)
+
+
+def shousuo(t,maxt):  #根据当前迭代次数和最大迭代次数生成A
+    a=2*(maxt-t)/maxt
+    r=random.random() #随机生成一个数
+    A=2*a*r-a
+    return A,2*r
+
+def WOA(xtrain,xtest,ytrain,ytest):
+    wd=xtrain.shape[1]
+    size=10
+    maxt=50  #最大迭代次数
+    goals = ['accuracy', 'Precision', 'Recall', 'F1']
+    for goal in range(len(goals)):
+        X=np.random.rand(size,wd)   #生成鲸鱼初始位置
+        MAXX,MAXFIT=pick(X,xtrain,xtest,ytrain,ytest,size,wd,goals[goal])   #保存历史过程中的最优和适应值信息
+        for t in tqdm(range(maxt)):
+            X=copy.deepcopy(xupdate(X,size,wd,t,maxt,MAXX))
+            maxx,maxfit=pick(X,xtrain,xtest,ytrain,ytest,size,wd,goals[goal])
+            if maxfit[goal] >MAXFIT[goal]:
+                MAXFIT=maxfit
+                MAXX=maxx
+            print('在第',t+1,'次迭代下',goals[goal],'为',MAXFIT[goal],'犯第一类错误的概率为',MAXFIT[4],
+                  '犯第二类错误的概率为',MAXFIT[5])
+
+
+
+
+
+
+x_train=pd.read_csv(r'd:\new aco\Auto loan default risk\x_train.csv',encoding='gbk')
+x_test=pd.read_csv(r'd:\new aco\Auto loan default risk\x_test.csv',encoding='gbk')
+y_train=pd.read_csv(r'd:\new aco\Auto loan default risk\y_train.csv',encoding='gbk')
+y_test=pd.read_csv(r'd:\new aco\Auto loan default risk\y_test.csv',encoding='gbk')
+
+
+
+WOA(x_train,x_test,y_train,y_test)
+
